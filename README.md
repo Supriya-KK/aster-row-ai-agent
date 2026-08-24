@@ -74,6 +74,29 @@ Run the application:
 python main.py
 ```
 
+## Example
+
+```text
+Customer: Where is order ORD-1001?
+
+Agent: We received the order and it has not entered processing yet.
+```
+
+```text
+Customer: What is the standard return window?
+
+Agent: The standard return window is 30 calendar days from delivery.
+```
+
+```text
+Customer: What is Aster & Row's policy for moon travel?
+
+Agent: I do not have enough information regarding Aster & Row's policy on moon travel.
+```
+
+The last example shows that the agent does not make up an answer when the required information is not available in the knowledge base.
+
+
 ## Testing
 
 Run:
