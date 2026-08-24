@@ -113,6 +113,25 @@ Current result:
 
 The tests cover order lookup, follow-up questions, return policies, invalid orders, unknown information, API errors, and cancellation requests.
 
+## Evaluation Results
+
+The project currently passes all automated tests.
+
+```text
+18 passed
+```
+
+The tests cover knowledge-base retrieval, order lookup, follow-up questions, invalid and unknown orders, unsupported questions, API errors, and cancellation requests.
+
+## Known Limitations
+
+* The current application runs through `main.py` and uses predefined questions for demonstration.
+* There is no separate web or chat interface.
+* Order information is stored in a local JSON file.
+* Order cancellation is detected and explained to the customer, but no real cancellation action is performed.
+* The application depends on the Gemini API for AI-generated responses.
+
+
 ## Note
 
 Orders are currently stored in a local JSON file, so actions such as cancelling an order are not actually performed.
