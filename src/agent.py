@@ -1,7 +1,6 @@
 import os
 import re
 
-from click import prompt
 from dotenv import load_dotenv
 from google import genai
 
@@ -34,8 +33,6 @@ Follow these rules:
 8. Do not claim that an action such as a refund, cancellation, replacement, or address change was completed unless the application actually performed that action.
 """
 def find_order_id(message):
-    import re
-
     matches=re.findall(
         r"\bORD-[A-Z0-9]+\b",
         message,
@@ -122,9 +119,8 @@ def ask_model(prompt):
     except Exception as e:
         if "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e):
             return "I'm temporarily unable to process your request because the AI service quota has been reached. Please try again later."
-
-        return "I'm temporarily unable to process your request. Please try again later."
-        return "MODEL_ERROR"
+    return "I'm temporarily unable to process your request. Please try again later."
+        
 def answer_question(user_message):
     global current_order_id
 
