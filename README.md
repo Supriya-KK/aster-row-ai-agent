@@ -30,7 +30,7 @@ The agent uses the supplied knowledge-base documents to answer customer question
 
 **Model:** Google Gemini `gemini-3.6-flash`
 
-**Retrieval:** TF-IDF based text retrieval using `scikit-learn`.
+**Retrieval:** TF-IDF-based text retrieval using `scikit-learn`.
 
 The Markdown files in `knowledge-base/` are split into smaller sections and searched using relevant words from the customer's question.
 
@@ -70,18 +70,26 @@ Final answer
 
 ```text
 aster-row-ai-agent/
+
 ├── data/
+│
 ├── evaluation/
 │   ├── visible-cases.json
 │   └── run_evaluation.py
+│
 ├── knowledge-base/
+│
 ├── src/
 │   ├── agent.py
 │   ├── orders.py
 │   └── rag.py
+│
 ├── tests/
+│
 ├── demo/
-│   └── agent-demo.mp4
+│   ├── agent-demo.mp4
+│   └── agent-demo.gif
+│
 ├── main.py
 ├── requirements.txt
 ├── .env.example
