@@ -321,11 +321,13 @@ One example of an incomplete AI suggestion was treating questions containing wor
 
 ## Demo
 
-The following video shows the agent running, including customer questions, order lookup, multi-turn behavior, safe responses, and the evaluation suite.
+The following demo shows the Aster & Row AI customer support agent working with customer questions, order lookup, multi-turn behavior, safe responses, and the evaluation suite.
 
-[Watch the agent demo](demo/agent-demo.mp4)
+<p align="center">
+  <img src="demo/agent-demo.gif" alt="Aster & Row AI Agent Demo" width="800">
+</p>
 
-> Note: GitHub does not play MP4 files inline in every README view. The video is included in the repository and can be opened from the link above.
+[▶️ Watch the full demo video](demo/agent-demo.mp4)
 
 ## Final Notes
 
