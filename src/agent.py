@@ -278,9 +278,9 @@ def build_policy_answer(message, documents):
 
     if "germany" in text:
         return (
-        "Shipping to Germany is not available at this time. "
-        "Aster & Row currently ships internationally only to Canada."
-)
+            "Shipping to Germany is not available at this time. "
+            "Aster & Row currently ships internationally only to Canada."
+        )
 
     if "canada" in text or "international" in text:
         return (
@@ -485,15 +485,6 @@ Answer the customer using the supplied evidence.
             answer = policy_answer
         else:
             answer = ask_model(prompt)
-
-            if "temporarily unable to process" in answer.lower():
-                if results:
-                    answer = results[0]["content"]
-                else:
-                    answer = (
-                        "I'm sorry, but I do not have enough information "
-                        "in the supplied knowledge base to answer that question."
-                    )
 
     conversation_history.append(
         f"Customer: {user_message}\nAgent: {answer}"

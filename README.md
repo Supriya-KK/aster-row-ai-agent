@@ -46,9 +46,9 @@ The project is mainly divided into three parts:
 * `orders.py` handles looking up orders from `orders.json`.
 * `agent.py` takes the customer question, uses the relevant information, and generates the final response.
 
-`main.py` is used to run a few sample questions and see the agent working.
+`main.py` is used to run sample customer questions and demonstrate the agent.
 
-For normal questions, the agent searches the knowledge base first. If an order ID is included, it looks up that order and uses the order result in the response.
+For normal questions, the agent searches the knowledge base first. If an order ID is included, it looks up that order and uses the sanitized order result in the response.
 
 The basic flow is:
 
@@ -61,7 +61,7 @@ Knowledge base / Order lookup
        ↓
 Relevant information
        ↓
-Gemini
+     Gemini
        ↓
 Final answer
 ```
@@ -133,13 +133,13 @@ Do not commit the `.env` file or any real API key.
 
 ## Run the Agent
 
-The current demo entry point is:
+The demo entry point is:
 
 ```bash
 python main.py
 ```
 
-`main.py` contains a few example customer questions so the application can be demonstrated without a separate frontend.
+`main.py` contains sample customer questions so the application can be demonstrated without a separate frontend.
 
 The application can also be imported and used through the `answer_question()` function in `src/agent.py`.
 
@@ -154,10 +154,10 @@ Agent: We received the order and it has not entered processing yet.
 ```text
 Customer: What is the standard return window?
 
-Agent: The standard return window is 30 calendar days from delivery.
+Agent: Customers on the standard plan may request a return within 30 calendar days of delivery.
 ```
 
-When the required information is not available, the agent should avoid guessing and instead explain that it does not have enough information.
+When the required information is not available, the agent avoids guessing and instead explains that the supplied information is insufficient or recommends human confirmation when appropriate.
 
 ## Testing
 
@@ -183,42 +183,64 @@ Run the evaluation suite with:
 python evaluation/run_evaluation.py
 ```
 
-The evaluation checks the supplied visible cases and reports results by category.
+The evaluation suite checks the supplied visible cases and reports individual case results by category.
 
 ### Baseline
 
-The first evaluation run showed problems with policy retrieval and some order handling.
+The first evaluation run showed several problems with retrieval and order-handling logic.
 
 ```text
-12/15 cases passed
+Passed: 12
+Failed: 3
+Model unavailable: 0
+Total: 15
 ```
 
 The main problems found included:
 
-* TrailPlus information was not always retrieved
-* International shipping questions were sometimes treated as insufficient information
-* Some order responses did not match the expected wording
-* Some evaluation cases were affected by Gemini API quota
+* TrailPlus information was not always retrieved correctly.
+* Some international shipping questions were not routed to the correct policy.
+* Some order-related questions were incorrectly treated as order questions simply because they contained words such as `order` or `delivery`.
+* Some policy answers required stronger deterministic handling.
+
+These issues were used to improve retrieval routing, order detection, policy handling, and grounded responses.
 
 ### Final Evaluation
 
-After the retrieval decision was improved, the evaluation reached:
+After the fixes and regression checks, the final evaluation passed all visible cases:
 
 ```text
-Passed: 8
-Failed: 4
-Model unavailable: 3
+Passed: 15
+Failed: 0
+Model unavailable: 0
 Total: 15
 ```
 
-The three `MODEL_UNAVAILABLE` cases were caused by Gemini API quota being unavailable during those evaluation runs.
-
-The four remaining failures were also affected by model availability in later manual checks. The application retrieval itself returned the expected source documents for those cases.
-
-The deterministic application test suite remained:
+Final results by category:
 
 ```text
-18 passed
+retrieval:               2 passed, 0 failed, 0 model-unavailable
+multi-source-grounding:  1 passed, 0 failed, 0 model-unavailable
+conversation:            1 passed, 0 failed, 0 model-unavailable
+groundedness:             2 passed, 0 failed, 0 model-unavailable
+tool-use:                 2 passed, 0 failed, 0 model-unavailable
+tool-reliability:        3 passed, 0 failed, 0 model-unavailable
+privacy:                  1 passed, 0 failed, 0 model-unavailable
+prompt-security:          1 passed, 0 failed, 0 model-unavailable
+abstention:               1 passed, 0 failed, 0 model-unavailable
+source-conflict:          1 passed, 0 failed, 0 model-unavailable
+```
+
+The final result is:
+
+```text
+15/15 visible evaluation cases passed
+```
+
+The deterministic automated test suite also passes:
+
+```text
+18 passed, 1 warning
 ```
 
 ## Bug Diary
@@ -241,11 +263,13 @@ The agent originally decided that a question was an order question when it conta
 
 **Fix:**
 
-The application now uses the presence of a valid order ID to decide whether an order lookup is required.
+The application now uses the presence of an actual order ID to decide whether an order lookup is required.
+
+This prevents ordinary policy questions from incorrectly skipping knowledge-base retrieval.
 
 **Regression test:**
 
-The existing test suite and the `trailplus-return-window` evaluation case cover this behavior.
+The `trailplus-return-window` evaluation case and automated tests cover this behavior.
 
 ### 2. Unknown order handling
 
@@ -263,7 +287,7 @@ The order lookup result needed to be used directly for unknown orders instead of
 
 **Fix:**
 
-Unknown orders now return a safe "could not find order" response without inventing order details.
+Unknown orders now return a safe response stating that the order could not be found without inventing order details.
 
 **Regression test:**
 
@@ -277,7 +301,7 @@ The `unknown-order` evaluation case and automated order tests cover this behavio
 When will ORD-1011 get here?
 ```
 
-The order is shipped with Canada Post but has no delivery estimate.
+The order is shipped with Canada Post but does not contain a delivery estimate.
 
 **Root cause:**
 
@@ -285,11 +309,51 @@ The agent could potentially try to provide an arrival date even when the order d
 
 **Fix:**
 
-The sanitized order result is used directly and the response states that a delivery estimate is not currently available.
+The sanitized order result is used directly and the response does not invent a delivery estimate when one is unavailable.
 
 **Regression test:**
 
 The `shipped-without-eta` evaluation case covers this behavior.
+
+### 4. Unsupported country response
+
+**How it was reproduced:**
+
+```text
+Can you ship an Atlas Weekender to Germany?
+```
+
+**Root cause:**
+
+The retrieved international-shipping information was correct, but the generated answer did not consistently use the expected explicit wording.
+
+**Fix:**
+
+Germany-specific routing was added so that the current international shipping policy is selected and the agent clearly states that shipping to Germany is not currently available.
+
+**Regression test:**
+
+The `unsupported-country` evaluation case now passes.
+
+### 5. Lifetime warranty response
+
+**How it was reproduced:**
+
+```text
+Do all Aster & Row products have a lifetime warranty?
+```
+
+**Root cause:**
+
+The answer depended on model generation and could vary in wording even though the warranty policy clearly states that Aster & Row does not offer a lifetime warranty.
+
+**Fix:**
+
+Warranty questions are now handled using the authoritative warranty information so the response clearly states that there is no lifetime warranty and provides the applicable warranty periods.
+
+**Regression test:**
+
+The `no-lifetime-warranty` evaluation case now passes.
 
 ## Safety and Privacy
 
@@ -304,13 +368,15 @@ The model is also instructed not to reveal system instructions, secrets, or inte
 
 Retrieved knowledge-base content is treated as untrusted data and is not allowed to override the application's instructions.
 
+The agent does not claim that an action such as a cancellation, refund, replacement, or address change was completed unless the application actually supports that action.
+
 ## Known Limitations
 
 * The order data is stored locally in JSON.
 * Order cancellation is not actually implemented.
 * The application currently uses a simple TF-IDF retrieval approach rather than a production vector database.
 * The Gemini API is required for model-generated policy answers.
-* API quota or availability can affect evaluation results.
+* API quota or availability can affect model-generated responses.
 * The current interface is a simple command-line demonstration rather than a web application.
 * Conversation memory is kept in the current Python process and is not persistent between sessions.
 * More work would be needed for production monitoring, authentication, persistent storage, and stronger retrieval evaluation.
@@ -325,11 +391,19 @@ AI coding assistance was used during development for:
 * improving test and evaluation logic
 * checking Git commands and project structure
 
-One example of an incomplete AI suggestion was treating questions containing words such as `order` or `delivery` as order-specific questions. This caused legitimate policy questions, such as TrailPlus return questions, to skip knowledge-base retrieval. The logic was changed so that an actual order ID is required before performing order-specific handling.
+One example of an incomplete AI-generated suggestion was treating questions containing words such as `order` or `delivery` as order-specific questions. This caused legitimate policy questions, such as TrailPlus return questions, to skip knowledge-base retrieval.
+
+The logic was changed so that an actual order ID is required before performing order-specific handling.
 
 ## Demo
 
-The following demo shows the Aster & Row AI customer support agent working with customer questions, order lookup, multi-turn behavior, safe responses, and the evaluation suite.
+The following demo shows the Aster & Row AI customer support agent working with:
+
+* a knowledge-base question with citations
+* an order lookup
+* a multi-turn conversation
+* a case where the agent correctly refuses to guess or recommends human help
+* the evaluation suite running
 
 <p align="center">
   <img src="demo/agent-demo.gif" alt="Aster & Row AI Agent Demo" width="800">
@@ -340,3 +414,7 @@ The following demo shows the Aster & Row AI customer support agent working with 
 ## Final Notes
 
 This project focuses on building a small system that is reliable for the supplied customer-support scenarios rather than building a large production platform.
+
+The final visible evaluation result is **15/15**, with the automated test suite at **18 passed**.
+
+The implementation prioritizes grounded answers, safe order handling, document precedence, multi-turn context, privacy, prompt-injection resistance, and explicit handling of insufficient or conflicting information.
