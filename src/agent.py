@@ -145,18 +145,7 @@ def answer_question(user_message):
     if order_id:
         order_result=lookup_order(order_id)
 
-    order_question_words=[
-        "order",
-        "shipment",
-        "tracking",
-        "delivered",
-        "delivery"
-    ]
-
-    is_order_question=any(
-        word in user_message.lower()
-        for word in order_question_words
-    )
+    is_order_question = order_id is not None
 
     if is_order_question:
         results=[]
